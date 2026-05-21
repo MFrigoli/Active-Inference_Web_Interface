@@ -56,7 +56,7 @@ Tre valori numerici per i costi operativi nella EFE:
 
 ### Timestep e seed
 - **Timestep totali**: durata della simulazione (30–100, default 50)
-- **Seed fisso**: riproduce la stessa sequenza di rumore ad ogni run; se disabilitato il rumore varia ad ogni interazione
+- **Seed fisso** (attivo per default): riproduce la stessa sequenza di rumore ad ogni run; se disabilitato il rumore varia ad ogni interazione
 
 ### Componenti architetturali
 Abilitano/disabilitano parti della pipeline di inferenza:
@@ -68,12 +68,12 @@ Abilitano/disabilitano parti della pipeline di inferenza:
 | Modello interno | Expected state sempre 0 → falsi positivi in fase stabile, nessun rilevamento durante attacco |
 
 ### Componenti EFE
-Abilitano/disabilitano termini della formula `G(π) = Risk(π) − EpistemicValue(π)`:
+Abilitano/disabilitano termini della formula `EFE(π) = −PragmaticValue(π) − EpistemicValue(π)`:
 
 | Componente | Effetto se disabilitato |
 |------------|------------------------|
-| Risk (= Hazard + Cost) | EFE = −EpistemicValue → slow vince sempre quando c'è incertezza |
-| Hazard | L'agente non percepisce la prossimità alla zona di transizione |
+| Pragmatic (= Risk + Cost) | EFE = −EpistemicValue → slow vince sempre quando c'è incertezza |
+| Risk | L'agente non percepisce la prossimità fisica alla zona di transizione |
 | Cost | Costo operativo = 0 per tutte le azioni |
 | Epistemic | Nessun incentivo a rallentare per ridurre incertezza → maintain vince sempre |
 
@@ -113,9 +113,9 @@ Otto grafici impilati che mostrano ogni livello della pipeline:
 | 1. Stato fisico | Ground truth vs lettura sensore (evidenzia la manipolazione FDIA) |
 | 2. Inference Layer | Belief state + incertezza + marker anomalia; hover mostra prediction error e decisione TRUST_MODEL/TRUST_SENSOR |
 | 3. Prediction Error | `|sensore − modello|` vs soglia — la zona rossa indica anomalia rilevata |
-| 4a. EFE Maintain | Risk e epistemic value per l'azione maintain; dot = timestep in cui è stata scelta |
-| 4b. EFE Slow | Risk e epistemic value per l'azione epistemic_slow |
-| 4c. EFE Stop | Risk e epistemic value per l'azione pragmatic_stop |
+| 4a. EFE Maintain | −PragmaticValue e epistemic value per l'azione maintain; dot = timestep in cui è stata scelta |
+| 4b. EFE Slow | −PragmaticValue e epistemic value per l'azione epistemic_slow |
+| 4c. EFE Stop | −PragmaticValue e epistemic value per l'azione pragmatic_stop |
 | 5. Decision Layer | Le tre curve EFE sovrapposte — visibile quale azione vince ad ogni step |
 | 6. Action Layer | Velocità risultante con sfondo colorato per azione |
 
@@ -123,36 +123,37 @@ Otto grafici impilati che mostrano ogni livello della pipeline:
 Mostra l'effetto dei componenti selezionati nella sidebar sulla pipeline di inferenza.
 Il titolo del grafico velocità cambia colore (verde = baseline completo, rosso = componente mancante).
 
-Tre grafici dinamici:
+Quattro grafici dinamici:
 - **Velocità** con eventuale marker blu per i timestep `epistemic_slow`
 - **Prediction Error & Uncertainty** — le due curve + soglia orizzontale
 - **Epistemic Value** — valore del termine epistemico nel tempo
+- **Pragmatic Value** — costo pragmatico dell'azione scelta (Risk + Cost) nel tempo
 
 Tabella riepilogativa fissa che descrive l'effetto teorico di ciascuna rimozione.
 
 ### Ablazione 2 — Componenti EFE
-Mostra l'effetto della combinazione attiva di Hazard/Cost/Epistemic.
-Il nome della configurazione (es. `NO_HAZARD | C - E`) e le metriche `TP/FP/Prec` sono mostrati sopra il grafico.
+Mostra l'effetto della combinazione attiva di Risk/Cost/Epistemic.
+Il nome della configurazione (es. `NO_RISK | C − E`) e le metriche `TP/FP/Prec` sono mostrati sopra il grafico.
 
 Un singolo grafico velocità con fill blu e due bande di sfondo:
 - Gialla: finestra di transizione meccanica [20, 30]
 - Rossa: finestra di attacco FDIA
 
-Tabella riepilogativa fissa con le 5 configurazioni notevoli (FULL, NO_HAZARD, NO_COST, NO_EPISTEMIC, NONE).
+Tabella riepilogativa fissa con le configurazioni notevoli (FULL, NO_RISK, NO_COST, NO_EPISTEMIC, NONE).
 
 ---
 
 ## Formula EFE
 
 ```
-G(π) = Risk(π) − EpistemicValue(π)
+EFE(π) = −PragmaticValue(π) − EpistemicValue(π)
 
-Risk(π) = Hazard(π) + Cost(π)
+PragmaticValue(π) = −Risk(π) − Cost(π)
 
-Hazard   = min(1.5, proximity + 0.5 · uncertainty)
+Risk      = min(1.5, proximity + 0.5 · uncertainty)
 proximity = max(0,  1 − 2 · |belief − TRANSITION|)
 
 EpistemicValue = uncertainty   se π = epistemic_slow, altrimenti 0
 ```
 
-L'agente esegue `π* = argmin_π G(π)` ad ogni timestep.
+L'agente esegue `π* = argmin_π EFE(π)` ad ogni timestep.
