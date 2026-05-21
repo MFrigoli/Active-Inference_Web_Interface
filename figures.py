@@ -30,9 +30,9 @@ def build_figures(log, attack_start, attack_end, anomaly_threshold):
     efe_m        = [d["efe_maintain"]       for d in log]
     efe_s        = [d["efe_slow"]           for d in log]
     efe_st       = [d["efe_stop"]           for d in log]
-    risk_m       = [d["risk_maintain"]      for d in log]
-    risk_s       = [d["risk_slow"]          for d in log]
-    risk_st      = [d["risk_stop"]          for d in log]
+    neg_pv_m     = [d["neg_pv_maintain"]    for d in log]
+    neg_pv_s     = [d["neg_pv_slow"]        for d in log]
+    neg_pv_st    = [d["neg_pv_stop"]        for d in log]
     epist_s      = [d["epistemic_slow_val"] for d in log]
     zero         = [0.0] * len(times)
     trust_labels = ["TRUST_MODEL" if d["anomaly"] else "TRUST_SENSOR" for d in log]
@@ -175,16 +175,16 @@ def build_figures(log, attack_start, attack_end, anomaly_threshold):
     ))
 
     # Helper: EFE per-action graph (4a / 4b / 4c)
-    def efe_action_fig(title, risk_vals, epist_vals, efe_vals_list,
+    def efe_action_fig(title, neg_pv_vals, epist_vals, efe_vals_list,
                        action_key, line_color, efe_label, efe_dash):
         ch_t = [d["t"] for d in log if d["action"] == action_key]
         ch_y = [efe_vals_list[d["t"]] for d in log if d["action"] == action_key]
         fig = go.Figure()
         fig.add_shape(**atk_shape())
         fig.add_trace(go.Scatter(
-            x=times, y=risk_vals, name="Risk",
+            x=times, y=neg_pv_vals, name="−PragmaticValue",
             line=dict(color="#c0392b", width=2),
-            hovertemplate="t=%{x} | Risk=%{y:.3f}<extra></extra>",
+            hovertemplate="t=%{x} | −PV=%{y:.3f}<extra></extra>",
         ))
         fig.add_trace(go.Scatter(
             x=times, y=epist_vals, name="Epistemic Value",
@@ -208,18 +208,18 @@ def build_figures(log, attack_start, attack_end, anomaly_threshold):
 
     fig4a = efe_action_fig(
         "4a. EFE Maintain  (v=10)",
-        risk_m, zero, efe_m, "maintain",
-        "#27ae60", "EFE maintain (= R−E)", "dot",
+        neg_pv_m, zero, efe_m, "maintain",
+        "#27ae60", "EFE maintain (= −PV−E)", "dot",
     )
     fig4b = efe_action_fig(
         "4b. EFE Slow  (v=4)",
-        risk_s, epist_s, efe_s, "epistemic_slow",
-        "#2980b9", "EFE epistemic (= R−E)", "dash",
+        neg_pv_s, epist_s, efe_s, "epistemic_slow",
+        "#2980b9", "EFE epistemic (= −PV−E)", "dash",
     )
     fig4c = efe_action_fig(
         "4c. EFE Stop  (v=0)",
-        risk_st, zero, efe_st, "pragmatic_stop",
-        "#c0392b", "EFE pragmatic (= R−E)", "dash",
+        neg_pv_st, zero, efe_st, "pragmatic_stop",
+        "#c0392b", "EFE pragmatic (= −PV−E)", "dash",
     )
 
     # 5. Decision Layer: quale azione ha EFE minima?

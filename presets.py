@@ -12,7 +12,7 @@ _BASE = dict(
     s_enable_threshold=True, s_enable_uncertainty=True, s_enable_model=True,
     s_min_uncertainty=0.1, s_lucky_model=False,
     s_cost_maintain=0.1, s_cost_slow=0.4, s_cost_stop=0.8,
-    s_time_steps=50, s_seed=42,
+    s_time_steps=50, s_seed=42, s_fixed_seed=True,
     s_attack_value=0.0,
 )
 
