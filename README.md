@@ -89,9 +89,9 @@ Sette card aggiornate in tempo reale dopo ogni modifica ai parametri:
 | **TP** | Timestep in cui il treno rallenta nella finestra [20, 30] durante l'attacco |
 | **FP** | Timestep in cui il treno rallenta inutilmente fuori dalla finestra [20, 30] |
 | **FN** | Timestep mancati: attacco in finestra, treno non rallenta (11 − TP) |
-| **F1-score** |  — misura bilanciata di precisione e recall |
-| **Precisione** | — quante rallentate sono corrette |
-| **Degradazione** | — quanto il sistema peggiora rispetto al baseline |
+| **F1-score** |  misura bilanciata di precisione e recall |
+| **Precisione** | quante rallentate sono corrette |
+| **Degradazione** | quanto il sistema peggiora rispetto al baseline |
 
 ---
 
