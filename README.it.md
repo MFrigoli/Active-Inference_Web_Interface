@@ -7,9 +7,12 @@ Visualizza in tempo reale come un agente basato sul Free Energy Principle (FEP) 
 
 ## Avvio
 
+**Terminale:**
 ```bash
 streamlit run app_streamlit.py
 ```
+
+**Doppio clic:** esegui `Launch Web Interface.vbs` — nessun terminale, il browser si apre automaticamente.
 
 Requisiti: `streamlit`, `plotly`
 
@@ -24,6 +27,8 @@ Requisiti: `streamlit`, `plotly`
 | `simulation.py` | Loop di simulazione e calcolo F1 |
 | `presets.py` | Preset sistemi fallaci e callback slider/number-input |
 | `translations.py` | Tutte le stringhe UI in italiano e inglese |
+| `Launch Web Interface.vbs` | Avvio silenzioso — doppio clic per avviare, nessun terminale |
+| `avvia.bat` | Avvio con terminale — utile per debug |
 
 ---
 

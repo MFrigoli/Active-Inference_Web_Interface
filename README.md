@@ -10,9 +10,12 @@
 
 ## Quick Start
 
+**Terminal:**
 ```bash
 streamlit run app_streamlit.py
 ```
+
+**Double-click launcher:** run `Launch Web Interface.vbs` — no terminal window, browser opens automatically.
 
 Requirements: `streamlit`, `plotly`
 
@@ -27,6 +30,8 @@ Requirements: `streamlit`, `plotly`
 | `simulation.py` | Simulation loop and F1 computation |
 | `presets.py` | Fallacious system presets and slider/number-input callbacks |
 | `translations.py` | All UI strings in Italian and English |
+| `Launch Web Interface.vbs` | Silent launcher — double-click to start, no terminal |
+| `avvia.bat` | Terminal launcher — use for debugging |
 
 ---
 
