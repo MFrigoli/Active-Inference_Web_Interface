@@ -234,21 +234,20 @@ with st.sidebar:
 
     st.divider()
     st.subheader("Componenti EFE",
-        help="EFE = Risk − EpistemicValue, dove Risk = Hazard + Cost. "
-             "Disattiva componenti per vedere come degrada il comportamento (ablation study)")
-    enable_risk = st.checkbox("Risk  (= Hazard + Cost)", key="s_enable_risk",
-        help="Termine pragmatico totale: Risk = Hazard + Cost. Se off: EFE = −EpistemicValue")
+        help="L'agente sceglie l'azione con il costo totale più basso. Disattiva i componenti per vedere come cambia il comportamento.")
+    enable_risk = st.checkbox("Pragmatic  (= Risk + Cost)", key="s_enable_risk",
+        help="Il termine 'pratico': tiene conto del pericolo fisico e del costo dell'azione. Se disattivato, l'agente ignora completamente rischi e costi.")
     _, _cb = st.columns([0.08, 0.92])
     with _cb:
-        enable_hazard = st.checkbox("Hazard", key="s_enable_hazard", disabled=not enable_risk,
-            help="Vicinanza al punto di transizione × incertezza belief. Quantifica il rischio fisico imminente")
-        enable_cost   = st.checkbox("Cost",   key="s_enable_cost",   disabled=not enable_risk,
-            help="Costo operativo fisso per azione (configurabile sopra). Bilancia efficienza e sicurezza")
+        enable_hazard = st.checkbox("Risk", key="s_enable_hazard", disabled=not enable_risk,
+            help="Quanto è pericoloso trovarsi vicino alla zona di transizione dello scambio. Più ci si avvicina, più il rischio sale.")
+        enable_cost   = st.checkbox("Cost", key="s_enable_cost",   disabled=not enable_risk,
+            help="Ogni azione ha un costo fisso: mantieni (0.1) < rallenta (0.4) < fermati (0.8). Incentiva a non frenare inutilmente.")
     if not enable_risk:
         enable_hazard = False
         enable_cost   = False
     enable_epistemic = st.checkbox("Epistemic", key="s_enable_epistemic",
-        help="EpistemicValue > 0 solo per 'slow'. Incentiva l'esplorazione attiva per ridurre l'incertezza")
+        help="Premia l'azione 'rallenta' quando il sistema è incerto: rallentare permette di osservare meglio lo scambio e ridurre il dubbio. Se disattivato, l'agente non esplora mai.")
 
 # ---------------------------------------------------------------------------
 # Simulazione
@@ -310,11 +309,11 @@ col3.metric("FP", fp,
 col4.metric("FN", fn,
             help="Timestep in cui il treno non rallenta quando dovrebbe (11 − TP)")
 col5.metric("F1-score", f"{f1:.0%}",
-            help="2·prec·rec / (prec+rec)  —  prec=TP/(TP+FP), rec=TP/11")
+            help="Media tra precisione e recall: misura quanto il sistema è sia preciso sia completo nel reagire al pericolo. 100% = reazione perfetta, 0% = nessuna reazione utile.")
 col6.metric("Precisione", f"{prec:.0%}",
-            help="TP / (TP + FP)  —  quante volte il rallentamento è corretto")
+            help="Quante delle volte in cui il treno ha rallentato, lo ha fatto davvero per un pericolo reale. Bassa = troppi falsi allarmi.")
 col7.metric("Degradazione", f"{degradazione:.1f}%",
-            help="(1 − F1_variante / F1_baseline) · 100")
+            help="Quanto peggiora il sistema rispetto alla configurazione completa (baseline). 0% = nessuna perdita, 100% = il sistema non funziona più.")
 
 st.divider()
 
@@ -325,7 +324,7 @@ st.divider()
 layers, overview = build_figures(log, attack_start, attack_end, anomaly_threshold)
 
 tab_overview, tab_layers, tab_abl1, tab_abl2 = st.tabs(
-    ["Grafici panoramici", "Percorso decisionale", "Ablazione 1", "Ablazione 2"]
+    ["GRAFICI PANORAMICI", "PERCORSO DECISIONALE", "ABLAZIONE 1", "ABLAZIONE 2"]
 )
 
 with tab_overview:
@@ -339,19 +338,47 @@ with tab_overview:
         st.plotly_chart(ov_unc, width="stretch", config=_cfg)
     st.plotly_chart(ov_efe, width="stretch", config=_cfg)
 
+    st.markdown("""
+### Come leggere i grafici
+
+| Grafico | Cosa mostra | Come leggerlo |
+|---|---|---|
+| **Stato switch:**<br>reale vs stimato vs sensore | Il confronto tra lo stato reale dello scambio (ground truth), la lettura del sensore (che può essere compromessa) e la stima interna del sistema (belief). | Quando sensore e stato reale divergono (durante l'attacco), il sistema dovrebbe ignorare il sensore e usare la propria stima. I marker × rossi indicano i momenti di anomalia rilevata. |
+| **Velocità treno e azione scelta** | La velocità del treno ad ogni istante, colorata per azione: verde = mantieni (10), arancio = rallenta (4), rosso = fermati (0). | Verde dominante = comportamento normale. Se arancio/rosso compaiono nella finestra t=20–30, l'agente ha reagito correttamente al pericolo. Se compaiono anche fuori, ci sono falsi allarmi. |
+| **Incertezza epistemica nel tempo** | Quanto il sistema è "confuso" sullo stato dello scambio in ogni istante. | Picchi alti = il sistema è incerto e cerca informazioni. Se l'incertezza sale durante l'attacco, il sistema ha riconosciuto che qualcosa non va. Se rimane bassa, ha accettato i dati falsi del sensore. |
+| **Valori EFE per azione** | I valori di Expected Free Energy per le tre azioni (mantieni, rallenta, fermati). L'agente sceglie sempre l'azione con EFE minimo. | La curva più in basso ad ogni istante indica l'azione scelta. Quando *slow* scende sotto *maintain*, l'agente rallenta. Quando le curve si incrociano, cambia l'azione preferita. |
+""", unsafe_allow_html=True)
+
 with tab_layers:
     _cfg = {"displayModeBar": False}
     for fig in layers:
         st.plotly_chart(fig, width="stretch", config=_cfg)
 
+    st.markdown("""
+### Come leggere i grafici
+
+| Grafico | Cosa mostra | Come leggerlo |
+|---|---|---|
+| **1. Stato fisico** | Lo stato reale dello scambio confrontato con la lettura del sensore. | Divergenza tra le due linee = il sensore è compromesso dall'attacco. Il sistema deve ignorare il sensore e affidarsi al modello interno. |
+| **2. Inference Layer: belief** | La stima interna (belief) sullo stato dello scambio, con l'incertezza (area grigia) e i momenti di anomalia rilevata (× rossi). | Quando il belief si discosta dal sensore e segue il modello interno, il sistema ha capito che i dati sono corrotti. Più × rossi durante l'attacco, meglio. |
+| **3. Prediction Error vs Soglia** | L'errore di predizione (quanto il sensore si discosta dall'atteso) confrontato con la soglia di anomalia (linea tratteggiata rossa). | Ogni volta che la linea arancione supera la soglia, scatta il rilevamento anomalia. Più spesso supera durante l'attacco (e non fuori), migliore è il comportamento. |
+| **4a. EFE Maintain** | Il calcolo EFE per l'azione "mantieni velocità": −PragmaticValue (rosso), Epistemic Value = 0, e la EFE risultante. | EFE basso = questa azione è conveniente in quel momento. Confrontalo con 4b e 4c per capire perché vince o perde. |
+| **4b. EFE Slow** | Il calcolo EFE per "rallenta": −PragmaticValue (rosso), guadagno epistemico (viola) e EFE risultante. | Quando il termine epistemico (viola) è alto, l'azione slow diventa più conveniente delle altre. I punti indicano quando è stata scelta. |
+| **4c. EFE Stop** | Il calcolo EFE per "fermati": −PragmaticValue alto (il costo di stop è 0.8) e EFE risultante. | Stop ha il costo operativo più alto, quindi vince solo quando il rischio fisico è molto elevato e supera lo svantaggio del costo. |
+| **5. Decision Layer: EFE minimo** | I valori EFE delle tre azioni sovrapposti, con i marker dell'azione scelta. | L'azione scelta ad ogni istante è quella con la curva più in basso. Quando le curve si incrociano, cambia l'azione preferita dell'agente. |
+| **6. Action Layer: velocità** | La velocità del treno con le aree colorate per azione: verde = mantieni, blu = rallenta, rosso = fermati. | Le aree colorate mostrano per quanto tempo ogni azione è stata attiva. Blu nella finestra t=20–30 = risposta corretta all'attacco. |
+""")
+
+
 with tab_abl1:
     st.markdown("## Ablazione 1 — Effetto della rimozione di ciascun componente architetturale")
 
-    _times  = [d["t"]                  for d in log]
-    _vel    = [d["velocity"]           for d in log]
-    _perr   = [d["prediction_error"]   for d in log]
-    _unc    = [d["uncertainty"]        for d in log]
-    _epist  = [d["epistemic_slow_val"] for d in log]
+    _times  = [d["t"]                   for d in log]
+    _vel    = [d["velocity"]            for d in log]
+    _perr   = [d["prediction_error"]    for d in log]
+    _unc    = [d["uncertainty"]         for d in log]
+    _epist  = [d["epistemic_slow_val"]  for d in log]
+    _negpv  = [-d["pragmatic_value"]    for d in log]
 
     _tp_a1   = sum(1 for d in log if d["velocity"] < 10 and TRANSITION_WIN[0] <= d["t"] <= TRANSITION_WIN[1])
     _fp_a1   = sum(1 for d in log if d["velocity"] < 10 and not (TRANSITION_WIN[0] <= d["t"] <= TRANSITION_WIN[1]))
@@ -379,7 +406,7 @@ with tab_abl1:
     if lucky_model:
         _missing.append("LUCKY MODEL")
     if not enable_hazard:
-        _missing.append("HAZARD")
+        _missing.append("RISK")
     if not enable_cost:
         _missing.append("COST")
 
@@ -459,17 +486,42 @@ with tab_abl1:
         hoverlabel=dict(bgcolor="white", font_color="black", font_size=13),
     )
 
+    _fpv = go.Figure()
+    _fpv.add_shape(**_atk_r)
+    _fpv.add_trace(go.Scatter(
+        x=_times, y=_negpv, showlegend=False,
+        line=dict(color="#e67e22", width=2),
+        hovertemplate="t=%{x} | −PV=%{y:.3f}<extra></extra>",
+    ))
+    _fpv.update_layout(
+        title=dict(text="Pragmatic Value", font=dict(size=12)),
+        xaxis=dict(range=_xrng, dtick=10),
+        yaxis=dict(title="Valore"),
+        height=280, margin=dict(t=40, b=40, l=50, r=10), showlegend=False,
+        hoverlabel=dict(bgcolor="white", font_color="black", font_size=13),
+    )
+
     st.plotly_chart(_fv,  use_container_width=True, config={"displayModeBar": False})
     st.plotly_chart(_fp2, use_container_width=True, config={"displayModeBar": False})
     st.plotly_chart(_fe,  use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(_fpv, use_container_width=True, config={"displayModeBar": False})
 
     st.divider()
     st.markdown("""
+### Come leggere i grafici
+
+| Grafico | Cosa mostra | Come leggerlo |
+|---|---|---|
+|  Azione (Velocità) | Velocità del treno ad ogni istante. Tre possibili azioni: mantieni (10), rallenta (4), fermati (0). | Se rallenta durante t=20–30 (transizione reale), il pericolo è stato rilevato. Se rimane a 10, nessuna reazione. Se rallenta anche fuori da quella finestra, ci sono falsi allarmi. |
+|  Prediction Error & Uncertainty | Errore di predizione (linea continua) — quanto il sensore si discosta da ciò che il modello si aspettava — e incertezza della belief (linea tratteggiata) — quanto il sistema è "confuso" sullo stato dello scambio. | Quando l'errore supera la soglia (linea puntinata rossa), il sistema alza l'incertezza al massimo: è il segnale che innesca la risposta. Se l'errore non supera mai la soglia, l'anomalia non viene rilevata. |
+|  Epistemic Value | Quanto vale "rallentare per guardare meglio". Premia l'azione *slow* quando l'incertezza è alta. | Picco alto → il sistema ha molto da guadagnare dall'esplorazione e sceglie di rallentare. Piatto a zero → l'epistemic value non influenza la scelta e il sistema tende a mantenere velocità. |
+|  Pragmatic Value | Costo pragmatico dell'azione scelta: rischio fisico (vicinanza alla transizione) + costo operativo (maintain=0.1, slow=0.4, stop=0.8). | Sale vicino alla zona di pericolo o quando l'azione scelta è costosa. Un valore alto non è necessariamente sbagliato: il sistema sta pagando un costo per gestire una situazione rischiosa. |
+
 ### Effetto della rimozione di ciascun componente architetturale
 
 | Componente rimosso | Effetto osservato |
 |---|---|
-| **Senza Epistemic Value** | Nessun incentivo a rallentare per ridurre l'incertezza. EFE = Risk per tutte le azioni → maintain vince sempre (costo minimo). Velocità sempre 10, TP = 0. |
+| **Senza Epistemic Value** | Nessun incentivo a rallentare per ridurre l'incertezza. EFE = −PragmaticValue per tutte le azioni → maintain vince sempre (costo minimo). Velocità sempre 10, TP = 0. |
 | **Senza Anomaly Threshold** | Il belief segue sempre il sensore, nessuna anomalia rilevata durante l'attacco. L'incertezza si alza comunque vicino a TRANSITION (0.5), quindi l'epistemic value può ancora far vincere slow — ma non correlato all'attacco FDIA. |
 | **Senza Uncertainty dinamica** | Uncertainty fissa a 0 → epistemic value = 0 → maintain vince sempre. Il sistema non apprende dalla propria incertezza. |
 | **Senza Modello interno** | Expected state sempre 0. Il sensore legge 0.5 durante la transizione → prediction_error > soglia fuori dall'attacco (FP alti). Durante l'attacco il sensore injetta 0.0 = expected → errore = 0 → nessuna anomalia rilevata (TP = 0). |
@@ -483,19 +535,19 @@ with tab_abl2:
     _e = enable_epistemic
 
     if _h and _c and _e:
-        _v2_name, _v2_formula = "FULL",           "(H+C) - E"
+        _v2_name, _v2_formula = "FULL",           "−PV − E"
     elif not _h and _c and _e:
-        _v2_name, _v2_formula = "NO_HAZARD",      "C - E"
+        _v2_name, _v2_formula = "NO_RISK",        "C − E"
     elif _h and not _c and _e:
-        _v2_name, _v2_formula = "NO_COST",        "H - E"
+        _v2_name, _v2_formula = "NO_COST",        "R − E"
     elif _h and _c and not _e:
-        _v2_name, _v2_formula = "NO_EPISTEMIC",   "(H+C)"
+        _v2_name, _v2_formula = "NO_EPISTEMIC",   "−PV"
     elif _h and not _c and not _e:
-        _v2_name, _v2_formula = "ONLY_HAZARD",    "H"
+        _v2_name, _v2_formula = "ONLY_RISK",      "R"
     elif not _h and _c and not _e:
         _v2_name, _v2_formula = "ONLY_COST",      "C"
     elif not _h and not _c and _e:
-        _v2_name, _v2_formula = "ONLY_EPISTEMIC", "-E"
+        _v2_name, _v2_formula = "ONLY_EPISTEMIC", "−E"
     else:
         _v2_name, _v2_formula = "NONE",           "0"
 
@@ -549,22 +601,30 @@ with tab_abl2:
 
     st.plotly_chart(_v2_fig, use_container_width=True, config={"displayModeBar": False})
 
+    st.markdown("""
+### Come leggere il grafico
+
+| Grafico | Cosa mostra | Come leggerlo |
+|---|---|---|
+| **Azione (Velocità)** | Velocità del treno ad ogni istante in funzione della configurazione EFE attiva. I componenti attivi cambiano la formula di scelta dell'azione. | Confronta il comportamento con la configurazione FULL (tutti i componenti attivi). Se il treno rallenta nella finestra t=20–30 senza falsi allarmi, i componenti attivi sono sufficienti. Se rallenta sempre o mai, un componente essenziale manca. |
+""")
+
     st.divider()
     st.markdown("""
 ### Formula EFE canonica
 
 ```
-EFE(π)  =        Risk(π)      -      EpistemicValue(π)
-            └──────────────┘      └────────────────────┘
-             Pragmatic term           Epistemic term
+EFE(π)  =   -   Pragmatic Value (π)    -     Epistemic Value(π)
+              └─────────────────────┘     └────────────────────┘
+                  Pragmatic term              Epistemic term
 
-Risk(π)  =  Hazard(π)  +  Cost(π)
+Pragmatic value  =  - Risk(π)  - Cost(π)
 ```
 
 | Componente | Descrizione |
 |---|---|
-| **Risk** | Termine pragmatico: quanto è rischioso agire in questo stato? |
-| &nbsp;&nbsp;&nbsp;&nbsp;↳ **Hazard** | Rischio di prossimità al punto critico (transizione dello scambio) |
+| **Pragmatic Value** | Termine pragmatico (= -Risk -Cost): quanto è costoso agire in questo stato? |
+| &nbsp;&nbsp;&nbsp;&nbsp;↳ **Risk** | Rischio fisico di prossimità al punto critico (transizione dello scambio) |
 | &nbsp;&nbsp;&nbsp;&nbsp;↳ **Cost** | Costo operativo dell'azione: maintain (0.1) < slow (0.4) < stop (0.8) |
 | **Epistemic Value** | Termine informativo: quanto riduce l'incertezza questa azione? |
 
@@ -574,9 +634,9 @@ Risk(π)  =  Hazard(π)  +  Cost(π)
 
 | Configurazione | Effetto osservato |
 |---|---|
-| **Senza Hazard** (Cost + Epistemic attivi) | L'agente non percepisce la prossimità alla transizione. Può rallentare lo stesso grazie all'epistemic value, ma non per motivi di sicurezza — il rallentamento non è correlato al pericolo reale. |
-| **Senza Cost** (Hazard + Epistemic attivi) | Il costo operativo è 0 per tutte le azioni. L'epistemic value differenzia ancora slow da maintain/stop, quindi l'agente rallenta più facilmente del baseline anche in assenza di pericolo. |
-| **Senza Epistemic** (Hazard + Cost attivi) | Nessun incentivo a rallentare per ridurre l'incertezza. Il Risk è identico per tutte le azioni, quindi vince sempre maintain (costo minimo 0.1). Velocità sempre 10, TP = 0. |
-| **Senza Risk** (Hazard + Cost entrambi off, Epistemic attivo) | EFE(slow) = −uncertainty < 0, EFE(maintain) = EFE(stop) = 0 → slow vince sempre quando uncertainty > 0. L'agente rallenta in modo indiscriminato, anche fuori dall'attacco. |
+| **Senza Risk** (Cost + Epistemic attivi) | L'agente non percepisce la prossimità alla transizione. Può rallentare lo stesso grazie all'epistemic value, ma non per motivi di sicurezza — il rallentamento non è correlato al pericolo reale. |
+| **Senza Cost** (Risk + Epistemic attivi) | Il costo operativo è 0 per tutte le azioni. L'epistemic value differenzia ancora slow da maintain/stop, quindi l'agente rallenta più facilmente del baseline anche in assenza di pericolo. |
+| **Senza Epistemic** (Risk + Cost attivi) | Nessun incentivo a rallentare per ridurre l'incertezza. −PragmaticValue è identico per tutte le azioni, quindi vince sempre maintain (costo minimo 0.1). Velocità sempre 10, TP = 0. |
+| **Senza −PragmaticValue** (Risk + Cost entrambi off, Epistemic attivo) | EFE(slow) = −uncertainty < 0, EFE(maintain) = EFE(stop) = 0 → slow vince sempre quando uncertainty > 0. L'agente rallenta in modo indiscriminato, anche fuori dall'attacco. |
 | **Nessun componente** (tutti off) | EFE = 0 per tutte le azioni → maintain vince sempre (primo elemento nella lista). Il sistema è cieco: non reagisce né al pericolo né all'incertezza. |
 """)

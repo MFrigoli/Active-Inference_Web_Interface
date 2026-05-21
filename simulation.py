@@ -106,11 +106,11 @@ def run_simulation(
         # --- EFE ---
         def calc_efe(action):
             if enable_hazard:
-                prox   = max(0.0, 1.0 - abs(belief_estimate - TRANSITION) * 2)
-                unc_h  = uncertainty * 0.5
-                hazard = min(1.5, prox + unc_h)
+                risk_prox = max(0.0, 1.0 - abs(belief_estimate - TRANSITION) * 2)
+                risk_unc  = uncertainty * 0.5
+                risk      = min(1.5, risk_prox + risk_unc)
             else:
-                prox = unc_h = hazard = 0.0
+                risk_prox = risk_unc = risk = 0.0
 
             cost = BASE_COSTS[action] if enable_cost else 0.0
 
@@ -119,10 +119,13 @@ def run_simulation(
             else:
                 epistemic = 0.0
 
+            pragmatic_value = -(risk + cost)
+
             return {
-                "hazard": hazard, "hazard_prox": prox, "hazard_unc": unc_h,
+                "risk": risk, "risk_prox": risk_prox, "risk_unc": risk_unc,
                 "cost": cost, "epistemic": epistemic,
-                "efe": hazard + cost - epistemic,
+                "pragmatic_value": pragmatic_value,
+                "efe": -pragmatic_value - epistemic,
             }
 
         efe_vals    = {a: calc_efe(a) for a in ["maintain", "epistemic_slow", "pragmatic_stop"]}
@@ -136,7 +139,6 @@ def run_simulation(
             velocity = V_STOP
 
         ch  = efe_vals[best_action]
-        _h  = efe_vals["maintain"]["hazard"]  # identico per tutte le azioni
         log.append({
             "t":                 t,
             "real_state":        switch_state,
@@ -152,14 +154,15 @@ def run_simulation(
             "efe_maintain":      efe_vals["maintain"]["efe"],
             "efe_slow":          efe_vals["epistemic_slow"]["efe"],
             "efe_stop":          efe_vals["pragmatic_stop"]["efe"],
-            "risk_maintain":     _h + efe_vals["maintain"]["cost"],
-            "risk_slow":         _h + efe_vals["epistemic_slow"]["cost"],
-            "risk_stop":         _h + efe_vals["pragmatic_stop"]["cost"],
+            "neg_pv_maintain":   -efe_vals["maintain"]["pragmatic_value"],
+            "neg_pv_slow":       -efe_vals["epistemic_slow"]["pragmatic_value"],
+            "neg_pv_stop":       -efe_vals["pragmatic_stop"]["pragmatic_value"],
             "epistemic_slow_val": efe_vals["epistemic_slow"]["epistemic"],
-            "hazard":            ch["hazard"],
-            "hazard_prox":       ch["hazard_prox"],
-            "hazard_unc":        ch["hazard_unc"],
+            "risk":              ch["risk"],
+            "risk_prox":         ch["risk_prox"],
+            "risk_unc":          ch["risk_unc"],
             "cost":              ch["cost"],
+            "pragmatic_value":   ch["pragmatic_value"],
             "epistemic":         ch["epistemic"],
         })
 
