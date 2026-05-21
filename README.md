@@ -150,8 +150,8 @@ EFE(π) = −PragmaticValue(π) − EpistemicValue(π)
 
 PragmaticValue(π) = −Risk(π) − Cost(π)
 
-Risk      = min(1.5, proximity + 0.5 · uncertainty)
-proximity = max(0,  1 − 2 · |belief − TRANSITION|)
+Risk      = min(1.5, proximity + 0.5 * uncertainty)
+proximity = max(0,  1 − 2 * |belief − TRANSITION|)
 
 EpistemicValue = uncertainty   se π = epistemic_slow, altrimenti 0
 ```
