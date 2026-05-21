@@ -112,7 +112,7 @@ Otto grafici impilati che mostrano ogni livello della pipeline:
 |---------|-----------|
 | 1. Stato fisico | Ground truth vs lettura sensore (evidenzia la manipolazione FDIA) |
 | 2. Inference Layer | Belief state + incertezza + marker anomalia; hover mostra prediction error e decisione TRUST_MODEL/TRUST_SENSOR |
-| 3. Prediction Error | sensore − modello vs soglia — la zona rossa indica anomalia rilevata |
+| 3. Prediction Error | '(sensore − modello)' vs soglia — la zona rossa indica anomalia rilevata |
 | 4a. EFE Maintain | Pragmatic value e epistemic value per l'azione maintain; dot = timestep in cui è stata scelta |
 | 4b. EFE Slow | Pragmatic value e epistemic value per l'azione epistemic_slow |
 | 4c. EFE Stop | Pragmatic value e epistemic value per l'azione pragmatic_stop |
