@@ -9,14 +9,15 @@ import random as _rnd
 import streamlit as st
 import plotly.graph_objects as go
 
-from simulation import run_simulation, compute_f1, TRANSITION_WIN, MAX_TP
-from figures    import build_figures, ACTION_COLORS, ACTION_LABELS
-from presets    import (
-    FALLACIOUS_PRESETS, _PRESET_HELP, _PRESET_KEYS, _BASE,
-    apply_preset, _make_pick,
+from simulation  import run_simulation, compute_f1, TRANSITION_WIN, MAX_TP
+from figures     import build_figures
+from presets     import (
+    _PRESET_KEYS, _BASE,
+    _make_pick,
     _sync_attack_start, _sync_attack_end, _sync_sensor_noise,
     _sync_time_steps, _sync_seed,
 )
+from translations import T
 
 # ---------------------------------------------------------------------------
 # Session state init
@@ -31,6 +32,15 @@ _cur_preset = st.session_state.get("preset_selector", "")
 for _i, _pname in enumerate(_PRESET_KEYS):
     if f"_pc_{_i}" not in st.session_state:
         st.session_state[f"_pc_{_i}"] = (_pname == _cur_preset)
+if "lang" not in st.session_state:
+    st.session_state["lang"] = "Italiano"
+
+# ---------------------------------------------------------------------------
+# Language
+# ---------------------------------------------------------------------------
+
+lang = "en" if st.session_state.get("lang") == "English" else "it"
+t    = T[lang]
 
 # ---------------------------------------------------------------------------
 # Page config + CSS
@@ -78,27 +88,32 @@ li:has(button[data-testid="main-menu-screencast"]) {
 </style>
 """, unsafe_allow_html=True)
 
-st.title("Railway Active Inference — Demo interattiva")
-st.markdown(
-    "Modifica i parametri nella barra laterale. "
-    "I grafici si aggiornano in tempo reale."
-)
+st.title(t["page_title"])
+st.markdown(t["page_subtitle"])
 
 # ---------------------------------------------------------------------------
 # Sidebar
 # ---------------------------------------------------------------------------
 
 with st.sidebar:
-    st.markdown("## Sistema fallace")
-    for _i, (_pname, _phelp) in enumerate(_PRESET_HELP.items()):
-        st.checkbox(_pname, key=f"_pc_{_i}", help=_phelp, on_change=_make_pick(_i, _pname))
+    st.radio("", ["Italiano", "English"], horizontal=True,
+             key="lang", label_visibility="collapsed")
 
     st.divider()
-    st.markdown("## Parametri simulazione")
+    st.markdown(t["sb_fallace"])
+    for _i, _pname in enumerate(_PRESET_KEYS):
+        st.checkbox(
+            t["preset_names"][_i], key=f"_pc_{_i}",
+            help=t["preset_helps"][_i],
+            on_change=_make_pick(_i, _pname),
+        )
 
     st.divider()
-    st.subheader("Attacco FDIA")
-    st.caption("Inizio attacco (t)")
+    st.markdown(t["sb_params"])
+
+    st.divider()
+    st.subheader(t["sb_fdia"])
+    st.caption(t["atk_start_cap"])
     _sl1, _ni1 = st.columns([0.72, 0.28])
     with _ni1:
         attack_start = st.number_input(
@@ -107,10 +122,10 @@ with st.sidebar:
         )
     with _sl1:
         st.session_state["_sl_attack_start"] = st.session_state["s_attack_start"]
-        st.slider("Inizio attacco (t)", 0, 45, key="_sl_attack_start",
+        st.slider(t["atk_start_cap"], 0, 45, key="_sl_attack_start",
                   on_change=_sync_attack_start, label_visibility="collapsed")
 
-    st.caption("Fine attacco (t)")
+    st.caption(t["atk_end_cap"])
     _sl2, _ni2 = st.columns([0.72, 0.28])
     with _ni2:
         attack_end = st.number_input(
@@ -119,17 +134,17 @@ with st.sidebar:
         )
     with _sl2:
         st.session_state["_sl_attack_end"] = st.session_state["s_attack_end"]
-        st.slider("Fine attacco (t)", 0, 49, key="_sl_attack_end",
+        st.slider(t["atk_end_cap"], 0, 49, key="_sl_attack_end",
                   on_change=_sync_attack_end, label_visibility="collapsed")
 
     if attack_end < attack_start:
-        st.warning("Fine attacco deve essere ≥ inizio attacco.")
+        st.warning(t["atk_warning"])
 
-    st.caption("Valore iniettato dall'attacco")
+    st.caption(t["atk_val_cap"])
     _atk_val_choice = st.radio(
-        "Valore iniettato",
+        t["atk_val_cap"],
         options=[0.0, 1.0],
-        format_func=lambda v: f"{v:.1f}  ({'nascosto: stesso stato reale' if v == 0.0 else 'opposto: massima discrepanza'})",
+        format_func=lambda v: f"{v:.1f}  ({t['atk_val_hidden'] if v == 0.0 else t['atk_val_opp']})",
         key="s_attack_value",
         horizontal=True,
         label_visibility="collapsed",
@@ -137,7 +152,7 @@ with st.sidebar:
     attack_value = _atk_val_choice
 
     st.divider()
-    st.subheader("Sensore e belief")
+    st.subheader(t["sb_sensor"])
     _sl3, _ni3 = st.columns([0.72, 0.28])
     with _ni3:
         sensor_noise = st.number_input(
@@ -146,34 +161,34 @@ with st.sidebar:
         )
     with _sl3:
         st.session_state["_sl_sensor_noise"] = st.session_state["s_sensor_noise"]
-        st.slider("Rumore sensore", 0.0, 0.30, step=0.01, key="_sl_sensor_noise",
+        st.slider(t["sb_sensor"], 0.0, 0.30, step=0.01, key="_sl_sensor_noise",
                   on_change=_sync_sensor_noise,
-                  help="Ampiezza del rumore uniforme [-n, +n] aggiunto alla lettura del sensore")
+                  help=t["noise_help"], label_visibility="collapsed")
 
     st.divider()
-    st.subheader("Costi azioni")
+    st.subheader(t["sb_costs"])
     _ca, _cb2, _cc = st.columns(3)
     with _ca:
         cost_maintain = st.number_input(
-            "maintain", min_value=0.0, max_value=1.0, step=0.05,
+            t["cost_maintain_cap"], min_value=0.0, max_value=1.0, step=0.05,
             key="s_cost_maintain",
-            help="Costo operativo per mantenere velocità nominale (default 0.1)",
+            help=t["cost_maintain_help"],
         )
     with _cb2:
         cost_slow = st.number_input(
-            "slow", min_value=0.0, max_value=1.0, step=0.05,
+            t["cost_slow_cap"], min_value=0.0, max_value=1.0, step=0.05,
             key="s_cost_slow",
-            help="Costo operativo per rallentare — azione epistemica (default 0.4)",
+            help=t["cost_slow_help"],
         )
     with _cc:
         cost_stop = st.number_input(
-            "stop", min_value=0.0, max_value=1.0, step=0.05,
+            t["cost_stop_cap"], min_value=0.0, max_value=1.0, step=0.05,
             key="s_cost_stop",
-            help="Costo operativo per fermarsi — azione pragmatica (default 0.8)",
+            help=t["cost_stop_help"],
         )
 
     st.divider()
-    st.subheader("Timestep e seed")
+    st.subheader(t["sb_time"])
     _sl_ts, _ni_ts = st.columns([0.72, 0.28])
     with _ni_ts:
         time_steps = st.number_input(
@@ -182,15 +197,12 @@ with st.sidebar:
         )
     with _sl_ts:
         st.session_state["_sl_time_steps"] = st.session_state["s_time_steps"]
-        st.slider("Timestep totali", 30, 100, key="_sl_time_steps",
+        st.slider(t["sb_time"], 30, 100, key="_sl_time_steps",
                   on_change=_sync_time_steps,
-                  help="Durata totale della simulazione in passi temporali")
+                  help=t["timestep_help"], label_visibility="collapsed")
 
-    fixed_seed = st.checkbox("Seed fisso", key="s_fixed_seed",
-        help="Seed = numero iniziale che controlla il generatore di numeri casuali. "
-             "Stesso seed → stesso rumore ad ogni run → simulazione riproducibile. "
-             "Se spento, seed cambia ad ogni interazione → rumore diverso ogni volta.")
-    st.caption("Seed")
+    fixed_seed = st.checkbox(t["seed_fixed"], key="s_fixed_seed", help=t["seed_help"])
+    st.caption(t["seed_cap"])
     _sl_sd, _ni_sd = st.columns([0.72, 0.28])
     with _ni_sd:
         seed = st.number_input(
@@ -199,17 +211,17 @@ with st.sidebar:
         )
     with _sl_sd:
         st.session_state["_sl_seed"] = st.session_state["s_seed"]
-        st.slider("Seed", 0, 9999, key="_sl_seed",
+        st.slider(t["seed_cap"], 0, 9999, key="_sl_seed",
                   on_change=_sync_seed, label_visibility="collapsed",
                   disabled=not fixed_seed)
 
     st.divider()
-    st.subheader("Componenti architetturali")
+    st.subheader(t["sb_arch"])
 
     _c1, _c2 = st.columns([0.55, 0.45])
     with _c1:
-        enable_threshold = st.checkbox("Anomaly Threshold", key="s_enable_threshold",
-            help="Soglia prediction error — Se off: nessuna anomalia rilevata")
+        enable_threshold = st.checkbox(t["arch_threshold_label"], key="s_enable_threshold",
+            help=t["arch_threshold_help"])
     with _c2:
         anomaly_threshold = st.number_input(
             "thr", min_value=0.01, max_value=0.95, step=0.01,
@@ -219,8 +231,8 @@ with st.sidebar:
 
     _c1, _c2 = st.columns([0.55, 0.45])
     with _c1:
-        enable_uncertainty = st.checkbox("Uncertainty dinamica", key="s_enable_uncertainty",
-            help="Valore minimo incertezza — Se off: uncertainty fissa a 0")
+        enable_uncertainty = st.checkbox(t["arch_uncertainty_label"], key="s_enable_uncertainty",
+            help=t["arch_uncertainty_help"])
     with _c2:
         min_uncertainty = st.number_input(
             "min", min_value=0.0, max_value=1.0, step=0.05,
@@ -228,26 +240,25 @@ with st.sidebar:
             disabled=not enable_uncertainty,
         )
 
-    enable_model = st.checkbox("Modello interno", key="s_enable_model",
-        help="Se off: expected=0 sempre")
+    enable_model = st.checkbox(t["arch_model_label"], key="s_enable_model",
+        help=t["arch_model_help"])
     lucky_model = st.session_state.get("s_lucky_model", False)
 
     st.divider()
-    st.subheader("Componenti EFE",
-        help="L'agente sceglie l'azione con il costo totale più basso. Disattiva i componenti per vedere come cambia il comportamento.")
-    enable_risk = st.checkbox("Pragmatic  (= Risk + Cost)", key="s_enable_risk",
-        help="Il termine 'pratico': tiene conto del pericolo fisico e del costo dell'azione. Se disattivato, l'agente ignora completamente rischi e costi.")
+    st.subheader(t["sb_efe"], help=t["efe_help"])
+    enable_risk = st.checkbox(t["efe_risk_label"], key="s_enable_risk",
+        help=t["efe_risk_help"])
     _, _cb = st.columns([0.08, 0.92])
     with _cb:
-        enable_hazard = st.checkbox("Risk", key="s_enable_hazard", disabled=not enable_risk,
-            help="Quanto è pericoloso trovarsi vicino alla zona di transizione dello scambio. Più ci si avvicina, più il rischio sale.")
-        enable_cost   = st.checkbox("Cost", key="s_enable_cost",   disabled=not enable_risk,
-            help="Ogni azione ha un costo fisso: mantieni (0.1) < rallenta (0.4) < fermati (0.8). Incentiva a non frenare inutilmente.")
+        enable_hazard = st.checkbox(t["efe_hazard_label"], key="s_enable_hazard",
+            disabled=not enable_risk, help=t["efe_hazard_help"])
+        enable_cost   = st.checkbox(t["efe_cost_label"],   key="s_enable_cost",
+            disabled=not enable_risk, help=t["efe_cost_help"])
     if not enable_risk:
         enable_hazard = False
         enable_cost   = False
-    enable_epistemic = st.checkbox("Epistemic", key="s_enable_epistemic",
-        help="Premia l'azione 'rallenta' quando il sistema è incerto: rallentare permette di osservare meglio lo scambio e ridurre il dubbio. Se disattivato, l'agente non esplora mai.")
+    enable_epistemic = st.checkbox(t["efe_epistemic_label"], key="s_enable_epistemic",
+        help=t["efe_epistemic_help"])
 
 # ---------------------------------------------------------------------------
 # Simulazione
@@ -279,7 +290,6 @@ log = run_simulation(
 # Metriche rapide
 # ---------------------------------------------------------------------------
 
-# Baseline fisso per calcolo degradazione
 log_baseline = run_simulation(
     anomaly_threshold=0.30, sensor_noise=0.05,
     attack_start=22, attack_end=28, time_steps=50,
@@ -300,20 +310,13 @@ f1           = compute_f1(log)
 degradazione = (1 - f1 / f1_baseline) * 100 if f1_baseline > 0 else 0.0
 
 col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
-col1.metric("Anomalie", n_anomalies,
-            help="Totale timestep in cui il belief ha rilevato un'anomalia")
-col2.metric("TP", tp, f"/{MAX_TP} max",
-            help="Timestep in cui il treno rallenta nella finestra di transizione [20,30]")
-col3.metric("FP", fp,
-            help="Timestep in cui il treno rallenta inutilmente fuori dalla finestra di transizione [20,30]")
-col4.metric("FN", fn,
-            help="Timestep in cui il treno non rallenta quando dovrebbe (11 − TP)")
-col5.metric("F1-score", f"{f1:.0%}",
-            help="Media tra precisione e recall: misura quanto il sistema è sia preciso sia completo nel reagire al pericolo. 100% = reazione perfetta, 0% = nessuna reazione utile.")
-col6.metric("Precisione", f"{prec:.0%}",
-            help="Quante delle volte in cui il treno ha rallentato, lo ha fatto davvero per un pericolo reale. Bassa = troppi falsi allarmi.")
-col7.metric("Degradazione", f"{degradazione:.1f}%",
-            help="Quanto peggiora il sistema rispetto alla configurazione completa (baseline). 0% = nessuna perdita, 100% = il sistema non funziona più.")
+col1.metric(t["m_anomalies"], n_anomalies, help=t["m_anomalies_help"])
+col2.metric("TP", tp, f"/{MAX_TP} max",   help=t["m_tp_help"])
+col3.metric("FP", fp,                      help=t["m_fp_help"])
+col4.metric("FN", fn,                      help=t["m_fn_help"])
+col5.metric(t["m_f1"],   f"{f1:.0%}",      help=t["m_f1_help"])
+col6.metric(t["m_prec"], f"{prec:.0%}",    help=t["m_prec_help"])
+col7.metric(t["m_deg"],  f"{degradazione:.1f}%", help=t["m_deg_help"])
 
 st.divider()
 
@@ -321,12 +324,13 @@ st.divider()
 # Grafici
 # ---------------------------------------------------------------------------
 
-layers, overview = build_figures(log, attack_start, attack_end, anomaly_threshold)
+layers, overview = build_figures(log, attack_start, attack_end, anomaly_threshold, lang=lang)
 
-tab_overview, tab_layers, tab_abl1, tab_abl2 = st.tabs(
-    ["GRAFICI PANORAMICI", "PERCORSO DECISIONALE", "ABLAZIONE 1", "ABLAZIONE 2"]
-)
+tab_overview, tab_layers, tab_abl1, tab_abl2 = st.tabs([
+    t["tab_overview"], t["tab_layers"], t["tab_abl1"], t["tab_abl2"]
+])
 
+# ── GRAFICI PANORAMICI ────────────────────────────────────────────────────────
 with tab_overview:
     ov_state, ov_vel, ov_unc, ov_efe = overview
     _cfg = {"displayModeBar": False}
@@ -337,41 +341,18 @@ with tab_overview:
     with col_u:
         st.plotly_chart(ov_unc, width="stretch", config=_cfg)
     st.plotly_chart(ov_efe, width="stretch", config=_cfg)
+    st.markdown(t["overview_md"], unsafe_allow_html=True)
 
-    st.markdown("""
-### Come leggere i grafici
-
-| Grafico | Cosa mostra | Come leggerlo |
-|---|---|---|
-| **Stato switch:**<br>reale vs stimato vs sensore | Il confronto tra lo stato reale dello scambio (ground truth), la lettura del sensore (che può essere compromessa) e la stima interna del sistema (belief). | Quando sensore e stato reale divergono (durante l'attacco), il sistema dovrebbe ignorare il sensore e usare la propria stima. I marker × rossi indicano i momenti di anomalia rilevata. |
-| **Velocità treno e azione scelta** | La velocità del treno ad ogni istante, colorata per azione: verde = mantieni (10), arancio = rallenta (4), rosso = fermati (0). | Verde dominante = comportamento normale. Se arancio/rosso compaiono nella finestra t=20–30, l'agente ha reagito correttamente al pericolo. Se compaiono anche fuori, ci sono falsi allarmi. |
-| **Incertezza epistemica nel tempo** | Quanto il sistema è "confuso" sullo stato dello scambio in ogni istante. | Picchi alti = il sistema è incerto e cerca informazioni. Se l'incertezza sale durante l'attacco, il sistema ha riconosciuto che qualcosa non va. Se rimane bassa, ha accettato i dati falsi del sensore. |
-| **Valori EFE per azione** | I valori di Expected Free Energy per le tre azioni (mantieni, rallenta, fermati). L'agente sceglie sempre l'azione con EFE minimo. | La curva più in basso ad ogni istante indica l'azione scelta. Quando *slow* scende sotto *maintain*, l'agente rallenta. Quando le curve si incrociano, cambia l'azione preferita. |
-""", unsafe_allow_html=True)
-
+# ── PERCORSO DECISIONALE ──────────────────────────────────────────────────────
 with tab_layers:
     _cfg = {"displayModeBar": False}
     for fig in layers:
         st.plotly_chart(fig, width="stretch", config=_cfg)
+    st.markdown(t["layers_md"])
 
-    st.markdown("""
-### Come leggere i grafici
-
-| Grafico | Cosa mostra | Come leggerlo |
-|---|---|---|
-| **1. Stato fisico** | Lo stato reale dello scambio confrontato con la lettura del sensore. | Divergenza tra le due linee = il sensore è compromesso dall'attacco. Il sistema deve ignorare il sensore e affidarsi al modello interno. |
-| **2. Inference Layer: belief** | La stima interna (belief) sullo stato dello scambio, con l'incertezza (area grigia) e i momenti di anomalia rilevata (× rossi). | Quando il belief si discosta dal sensore e segue il modello interno, il sistema ha capito che i dati sono corrotti. Più × rossi durante l'attacco, meglio. |
-| **3. Prediction Error vs Soglia** | L'errore di predizione (quanto il sensore si discosta dall'atteso) confrontato con la soglia di anomalia (linea tratteggiata rossa). | Ogni volta che la linea arancione supera la soglia, scatta il rilevamento anomalia. Più spesso supera durante l'attacco (e non fuori), migliore è il comportamento. |
-| **4a. EFE Maintain** | Il calcolo EFE per l'azione "mantieni velocità": −PragmaticValue (rosso), Epistemic Value = 0, e la EFE risultante. | EFE basso = questa azione è conveniente in quel momento. Confrontalo con 4b e 4c per capire perché vince o perde. |
-| **4b. EFE Slow** | Il calcolo EFE per "rallenta": −PragmaticValue (rosso), guadagno epistemico (viola) e EFE risultante. | Quando il termine epistemico (viola) è alto, l'azione slow diventa più conveniente delle altre. I punti indicano quando è stata scelta. |
-| **4c. EFE Stop** | Il calcolo EFE per "fermati": −PragmaticValue alto (il costo di stop è 0.8) e EFE risultante. | Stop ha il costo operativo più alto, quindi vince solo quando il rischio fisico è molto elevato e supera lo svantaggio del costo. |
-| **5. Decision Layer: EFE minimo** | I valori EFE delle tre azioni sovrapposti, con i marker dell'azione scelta. | L'azione scelta ad ogni istante è quella con la curva più in basso. Quando le curve si incrociano, cambia l'azione preferita dell'agente. |
-| **6. Action Layer: velocità** | La velocità del treno con le aree colorate per azione: verde = mantieni, blu = rallenta, rosso = fermati. | Le aree colorate mostrano per quanto tempo ogni azione è stata attiva. Blu nella finestra t=20–30 = risposta corretta all'attacco. |
-""")
-
-
+# ── ABLAZIONE 1 ───────────────────────────────────────────────────────────────
 with tab_abl1:
-    st.markdown("## Ablazione 1 — Effetto della rimozione di ciascun componente architetturale")
+    st.markdown(t["abl1_title"])
 
     _times  = [d["t"]                   for d in log]
     _vel    = [d["velocity"]            for d in log]
@@ -379,10 +360,6 @@ with tab_abl1:
     _unc    = [d["uncertainty"]         for d in log]
     _epist  = [d["epistemic_slow_val"]  for d in log]
     _negpv  = [-d["pragmatic_value"]    for d in log]
-
-    _tp_a1   = sum(1 for d in log if d["velocity"] < 10 and TRANSITION_WIN[0] <= d["t"] <= TRANSITION_WIN[1])
-    _fp_a1   = sum(1 for d in log if d["velocity"] < 10 and not (TRANSITION_WIN[0] <= d["t"] <= TRANSITION_WIN[1]))
-    _prec_a1 = _tp_a1 / (_tp_a1 + _fp_a1) if (_tp_a1 + _fp_a1) > 0 else 0.0
 
     _xrng  = [-0.5, _times[-1] + 0.5]
     _atk_r = dict(type="rect", xref="x", yref="paper",
@@ -396,28 +373,34 @@ with tab_abl1:
 
     _missing = []
     if not enable_epistemic:
-        _missing.append("EPISTEMIC VALUE")
+        _missing.append(t["abl1_miss_epistemic"])
     if not enable_threshold:
-        _missing.append("ANOMALY THRESHOLD")
+        _missing.append(t["abl1_miss_threshold"])
+    elif enable_threshold and anomaly_threshold < 0.05:
+        _missing.append(t["abl1_miss_threshold_low"])
     if not enable_uncertainty:
-        _missing.append("UNCERTAINTY DINAMICA")
+        _missing.append(t["abl1_miss_uncertainty"])
+    elif enable_uncertainty and min_uncertainty > 0.5:
+        _missing.append(t["abl1_miss_unc_locked"])
     if not enable_model:
-        _missing.append("MODELLO INTERNO")
+        _missing.append(t["abl1_miss_model"])
     if lucky_model:
-        _missing.append("LUCKY MODEL")
+        _missing.append(t["abl1_miss_lucky"])
     if not enable_hazard:
-        _missing.append("RISK")
+        _missing.append(t["abl1_miss_risk"])
     if not enable_cost:
-        _missing.append("COST")
+        _missing.append(t["abl1_miss_cost"])
+    if cost_maintain > 0.5:
+        _missing.append(t["abl1_miss_cost_high"])
 
     if not _missing:
-        _title_text  = "BASELINE (sistema completo)"
+        _title_text  = t["abl1_baseline"]
         _title_color = "#27ae60"
-        _status      = "[OK]"
+        _status      = t["abl1_ok"]
     else:
-        _title_text  = "SENZA " + " + ".join(_missing)
+        _title_text  = t["abl1_without"] + " + ".join(_missing)
         _title_color = "#e74c3c"
-        _status      = "[FAIL]"
+        _status      = t["abl1_fail"]
 
     _fv = go.Figure()
     _fv.add_shape(**_atk_r)
@@ -434,7 +417,7 @@ with tab_abl1:
     _fv.update_layout(
         title=dict(text=f"{_status} {_title_text}", font=dict(color=_title_color, size=12)),
         xaxis=dict(range=_xrng, dtick=10),
-        yaxis=dict(range=[-0.5, 12], title="Velocità"),
+        yaxis=dict(range=[-0.5, 12], title=t["abl1_vel_axis"]),
         height=280, margin=dict(t=40, b=40, l=50, r=10), showlegend=False,
         hoverlabel=dict(bgcolor="white", font_color="black", font_size=13),
     )
@@ -442,24 +425,24 @@ with tab_abl1:
     _fp2 = go.Figure()
     _fp2.add_shape(**_atk_r)
     _fp2.add_trace(go.Scatter(
-        x=_times, y=_perr, name="Prediction error",
+        x=_times, y=_perr, name=t["abl1_pred_err"],
         line=dict(color="#27ae60", width=1.5),
         hovertemplate="t=%{x} | err=%{y:.3f}<extra></extra>",
     ))
     _fp2.add_trace(go.Scatter(
-        x=_times, y=_unc, name="Uncertainty",
+        x=_times, y=_unc, name=t["abl1_unc"],
         line=dict(color="#2980b9", width=1.5, dash="dash"),
         hovertemplate="t=%{x} | unc=%{y:.3f}<extra></extra>",
     ))
     _fp2.add_trace(go.Scatter(
         x=_times, y=[anomaly_threshold] * len(_times),
-        name=f"Soglia ({anomaly_threshold:.2f})",
+        name=f"{t['abl1_threshold']} ({anomaly_threshold:.2f})",
         line=dict(color="#e74c3c", width=1, dash="dot"),
     ))
     _fp2.update_layout(
-        title=dict(text="Prediction Error & Uncertainty", font=dict(size=12)),
+        title=dict(text=t["abl1_pred_err_unc_title"], font=dict(size=12)),
         xaxis=dict(range=_xrng, dtick=10),
-        yaxis=dict(range=[0, 1.15], title="Valore"),
+        yaxis=dict(range=[0, 1.15], title=t["abl1_val_axis"]),
         legend=dict(
             orientation="v", x=0.01, y=0.98,
             xanchor="left", yanchor="top",
@@ -479,9 +462,9 @@ with tab_abl1:
         hovertemplate="t=%{x} | epist=%{y:.3f}<extra></extra>",
     ))
     _fe.update_layout(
-        title=dict(text="Epistemic Value", font=dict(size=12)),
+        title=dict(text=t["abl1_epist_val_title"], font=dict(size=12)),
         xaxis=dict(range=_xrng, dtick=10),
-        yaxis=dict(range=[0, 1.2], title="Valore"),
+        yaxis=dict(range=[0, 1.2], title=t["abl1_val_axis"]),
         height=280, margin=dict(t=40, b=40, l=50, r=10), showlegend=False,
         hoverlabel=dict(bgcolor="white", font_color="black", font_size=13),
     )
@@ -494,9 +477,9 @@ with tab_abl1:
         hovertemplate="t=%{x} | −PV=%{y:.3f}<extra></extra>",
     ))
     _fpv.update_layout(
-        title=dict(text="Pragmatic Value", font=dict(size=12)),
+        title=dict(text=t["abl1_prag_val_title"], font=dict(size=12)),
         xaxis=dict(range=_xrng, dtick=10),
-        yaxis=dict(title="Valore"),
+        yaxis=dict(title=t["abl1_val_axis"]),
         height=280, margin=dict(t=40, b=40, l=50, r=10), showlegend=False,
         hoverlabel=dict(bgcolor="white", font_color="black", font_size=13),
     )
@@ -507,28 +490,11 @@ with tab_abl1:
     st.plotly_chart(_fpv, use_container_width=True, config={"displayModeBar": False})
 
     st.divider()
-    st.markdown("""
-### Come leggere i grafici
+    st.markdown(t["abl1_md"])
 
-| Grafico | Cosa mostra | Come leggerlo |
-|---|---|---|
-|  Azione (Velocità) | Velocità del treno ad ogni istante. Tre possibili azioni: mantieni (10), rallenta (4), fermati (0). | Se rallenta durante t=20–30 (transizione reale), il pericolo è stato rilevato. Se rimane a 10, nessuna reazione. Se rallenta anche fuori da quella finestra, ci sono falsi allarmi. |
-|  Prediction Error & Uncertainty | Errore di predizione (linea continua) — quanto il sensore si discosta da ciò che il modello si aspettava — e incertezza della belief (linea tratteggiata) — quanto il sistema è "confuso" sullo stato dello scambio. | Quando l'errore supera la soglia (linea puntinata rossa), il sistema alza l'incertezza al massimo: è il segnale che innesca la risposta. Se l'errore non supera mai la soglia, l'anomalia non viene rilevata. |
-|  Epistemic Value | Quanto vale "rallentare per guardare meglio". Premia l'azione *slow* quando l'incertezza è alta. | Picco alto → il sistema ha molto da guadagnare dall'esplorazione e sceglie di rallentare. Piatto a zero → l'epistemic value non influenza la scelta e il sistema tende a mantenere velocità. |
-|  Pragmatic Value | Costo pragmatico dell'azione scelta: rischio fisico (vicinanza alla transizione) + costo operativo (maintain=0.1, slow=0.4, stop=0.8). | Sale vicino alla zona di pericolo o quando l'azione scelta è costosa. Un valore alto non è necessariamente sbagliato: il sistema sta pagando un costo per gestire una situazione rischiosa. |
-
-### Effetto della rimozione di ciascun componente architetturale
-
-| Componente rimosso | Effetto osservato |
-|---|---|
-| **Senza Epistemic Value** | Nessun incentivo a rallentare per ridurre l'incertezza. EFE = −PragmaticValue per tutte le azioni → maintain vince sempre (costo minimo). Velocità sempre 10, TP = 0. |
-| **Senza Anomaly Threshold** | Il belief segue sempre il sensore, nessuna anomalia rilevata durante l'attacco. L'incertezza si alza comunque vicino a TRANSITION (0.5), quindi l'epistemic value può ancora far vincere slow — ma non correlato all'attacco FDIA. |
-| **Senza Uncertainty dinamica** | Uncertainty fissa a 0 → epistemic value = 0 → maintain vince sempre. Il sistema non apprende dalla propria incertezza. |
-| **Senza Modello interno** | Expected state sempre 0. Il sensore legge 0.5 durante la transizione → prediction_error > soglia fuori dall'attacco (FP alti). Durante l'attacco il sensore injetta 0.0 = expected → errore = 0 → nessuna anomalia rilevata (TP = 0). |
-""")
-
+# ── ABLAZIONE 2 ───────────────────────────────────────────────────────────────
 with tab_abl2:
-    st.markdown("## Ablazione 2 — Effetto della rimozione di ciascun componente EFE")
+    st.markdown(t["abl2_title"])
 
     _h = enable_hazard
     _c = enable_cost
@@ -592,7 +558,7 @@ with tab_abl2:
 
     _v2_fig.update_layout(
         xaxis=dict(range=_v2_xrng, dtick=10, showgrid=True),
-        yaxis=dict(range=[0, 12], title="Velocità (km/h)", showgrid=True),
+        yaxis=dict(range=[0, 12], title=t["abl2_vel_axis"], showgrid=True),
         height=380,
         margin=dict(t=20, b=50, l=60, r=20),
         legend=dict(itemclick=False, itemdoubleclick=False),
@@ -601,42 +567,7 @@ with tab_abl2:
 
     st.plotly_chart(_v2_fig, use_container_width=True, config={"displayModeBar": False})
 
-    st.markdown("""
-### Come leggere il grafico
-
-| Grafico | Cosa mostra | Come leggerlo |
-|---|---|---|
-| **Azione (Velocità)** | Velocità del treno ad ogni istante in funzione della configurazione EFE attiva. I componenti attivi cambiano la formula di scelta dell'azione. | Confronta il comportamento con la configurazione FULL (tutti i componenti attivi). Se il treno rallenta nella finestra t=20–30 senza falsi allarmi, i componenti attivi sono sufficienti. Se rallenta sempre o mai, un componente essenziale manca. |
-""")
+    st.markdown(t["abl2_how_to_md"])
 
     st.divider()
-    st.markdown("""
-### Formula EFE canonica
-
-```
-EFE(π)  =   -   Pragmatic Value (π)    -     Epistemic Value(π)
-              └─────────────────────┘     └────────────────────┘
-                  Pragmatic term              Epistemic term
-
-Pragmatic value  =  - Risk(π)  - Cost(π)
-```
-
-| Componente | Descrizione |
-|---|---|
-| **Pragmatic Value** | Termine pragmatico (= -Risk -Cost): quanto è costoso agire in questo stato? |
-| &nbsp;&nbsp;&nbsp;&nbsp;↳ **Risk** | Rischio fisico di prossimità al punto critico (transizione dello scambio) |
-| &nbsp;&nbsp;&nbsp;&nbsp;↳ **Cost** | Costo operativo dell'azione: maintain (0.1) < slow (0.4) < stop (0.8) |
-| **Epistemic Value** | Termine informativo: quanto riduce l'incertezza questa azione? |
-
----
-
-### Effetto della rimozione di ciascun componente EFE
-
-| Configurazione | Effetto osservato |
-|---|---|
-| **Senza Risk** (Cost + Epistemic attivi) | L'agente non percepisce la prossimità alla transizione. Può rallentare lo stesso grazie all'epistemic value, ma non per motivi di sicurezza — il rallentamento non è correlato al pericolo reale. |
-| **Senza Cost** (Risk + Epistemic attivi) | Il costo operativo è 0 per tutte le azioni. L'epistemic value differenzia ancora slow da maintain/stop, quindi l'agente rallenta più facilmente del baseline anche in assenza di pericolo. |
-| **Senza Epistemic** (Risk + Cost attivi) | Nessun incentivo a rallentare per ridurre l'incertezza. −PragmaticValue è identico per tutte le azioni, quindi vince sempre maintain (costo minimo 0.1). Velocità sempre 10, TP = 0. |
-| **Senza −PragmaticValue** (Risk + Cost entrambi off, Epistemic attivo) | EFE(slow) = −uncertainty < 0, EFE(maintain) = EFE(stop) = 0 → slow vince sempre quando uncertainty > 0. L'agente rallenta in modo indiscriminato, anche fuori dall'attacco. |
-| **Nessun componente** (tutti off) | EFE = 0 per tutte le azioni → maintain vince sempre (primo elemento nella lista). Il sistema è cieco: non reagisce né al pericolo né all'incertezza. |
-""")
+    st.markdown(t["abl2_formula_md"])
