@@ -89,9 +89,9 @@ Sette card aggiornate in tempo reale dopo ogni modifica ai parametri:
 | **TP** | Timestep in cui il treno rallenta nella finestra [20, 30] durante l'attacco |
 | **FP** | Timestep in cui il treno rallenta inutilmente fuori dalla finestra [20, 30] |
 | **FN** | Timestep mancati: attacco in finestra, treno non rallenta (11 − TP) |
-| **F1-score** | `2·prec·rec / (prec+rec)` — misura bilanciata di precisione e recall |
-| **Precisione** | `TP / (TP + FP)` — quante rallentate sono corrette |
-| **Degradazione** | `(1 − F1_variante / F1_baseline) · 100` — quanto il sistema peggiora rispetto al baseline |
+| **F1-score** |  — misura bilanciata di precisione e recall |
+| **Precisione** | — quante rallentate sono corrette |
+| **Degradazione** | — quanto il sistema peggiora rispetto al baseline |
 
 ---
 
@@ -112,10 +112,10 @@ Otto grafici impilati che mostrano ogni livello della pipeline:
 |---------|-----------|
 | 1. Stato fisico | Ground truth vs lettura sensore (evidenzia la manipolazione FDIA) |
 | 2. Inference Layer | Belief state + incertezza + marker anomalia; hover mostra prediction error e decisione TRUST_MODEL/TRUST_SENSOR |
-| 3. Prediction Error | `|sensore − modello|` vs soglia — la zona rossa indica anomalia rilevata |
-| 4a. EFE Maintain | −PragmaticValue e epistemic value per l'azione maintain; dot = timestep in cui è stata scelta |
-| 4b. EFE Slow | −PragmaticValue e epistemic value per l'azione epistemic_slow |
-| 4c. EFE Stop | −PragmaticValue e epistemic value per l'azione pragmatic_stop |
+| 3. Prediction Error | sensore − modello vs soglia — la zona rossa indica anomalia rilevata |
+| 4a. EFE Maintain | Pragmatic value e epistemic value per l'azione maintain; dot = timestep in cui è stata scelta |
+| 4b. EFE Slow | Pragmatic value e epistemic value per l'azione epistemic_slow |
+| 4c. EFE Stop | Pragmatic value e epistemic value per l'azione pragmatic_stop |
 | 5. Decision Layer | Le tre curve EFE sovrapposte — visibile quale azione vince ad ogni step |
 | 6. Action Layer | Velocità risultante con sfondo colorato per azione |
 
