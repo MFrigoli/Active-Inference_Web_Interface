@@ -6,7 +6,6 @@ Logica di simulazione Railway Active Inference (parametrizzata).
 import random
 
 TRANSITION_WIN = (20, 30)
-MAX_TP = TRANSITION_WIN[1] - TRANSITION_WIN[0] + 1  # 11
 
 
 def run_simulation(
@@ -169,9 +168,35 @@ def run_simulation(
     return log
 
 
-def compute_f1(sim_log):
-    _tp  = sum(1 for d in sim_log if d["velocity"] < 10 and TRANSITION_WIN[0] <= d["t"] <= TRANSITION_WIN[1])
-    _fp  = sum(1 for d in sim_log if d["velocity"] < 10 and not (TRANSITION_WIN[0] <= d["t"] <= TRANSITION_WIN[1]))
-    prec = _tp / (_tp + _fp) if (_tp + _fp) > 0 else 0.0
-    rec  = _tp / MAX_TP
-    return 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
+def compute_metrics(sim_log):
+    """Metriche di rilevamento basate sul flag anomaly (coerente con la tesi).
+
+    TP = anomaly=True  AND  attack=True  AND  t in TRANSITION_WIN
+    FP = anomaly=True  AND  attack=False  (qualsiasi t)
+    FN = anomaly=False AND  attack=True   AND  t in TRANSITION_WIN
+    """
+    tp = fp = fn = 0
+    for d in sim_log:
+        t      = d["t"]
+        anom   = d["anomaly"]
+        attack = d["attack"]
+        in_win = TRANSITION_WIN[0] <= t <= TRANSITION_WIN[1]
+
+        if anom and attack and in_win:
+            tp += 1
+        elif anom and not attack:
+            fp += 1
+        elif not anom and attack and in_win:
+            fn += 1
+
+    max_tp = sum(
+        1 for d in sim_log
+        if d["attack"] and TRANSITION_WIN[0] <= d["t"] <= TRANSITION_WIN[1]
+    )
+    prec   = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1     = 2 * prec * recall / (prec + recall) if (prec + recall) > 0 else 0.0
+    return {
+        "tp": tp, "fp": fp, "fn": fn, "max_tp": max_tp,
+        "precision": prec, "recall": recall, "f1": f1,
+    }

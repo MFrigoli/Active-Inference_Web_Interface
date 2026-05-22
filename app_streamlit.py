@@ -9,7 +9,7 @@ import random as _rnd
 import streamlit as st
 import plotly.graph_objects as go
 
-from simulation  import run_simulation, compute_f1, TRANSITION_WIN, MAX_TP
+from simulation  import run_simulation, compute_metrics, TRANSITION_WIN
 from figures     import build_figures
 from presets     import (
     _PRESET_KEYS, _BASE,
@@ -299,19 +299,20 @@ log_baseline = run_simulation(
     enable_threshold=True, enable_uncertainty=True, enable_model=True,
     min_uncertainty=0.1, lucky_model=False,
 )
-f1_baseline = compute_f1(log_baseline)
+f1_baseline = compute_metrics(log_baseline)["f1"]
 
-n_anomalies  = sum(1 for d in log if d["anomaly"])
-tp           = sum(1 for d in log if d["velocity"] < 10 and TRANSITION_WIN[0] <= d["t"] <= TRANSITION_WIN[1])
-fp           = sum(1 for d in log if d["velocity"] < 10 and not (TRANSITION_WIN[0] <= d["t"] <= TRANSITION_WIN[1]))
-fn           = MAX_TP - tp
-prec         = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-f1           = compute_f1(log)
+n_anomalies = sum(1 for d in log if d["anomaly"])
+m           = compute_metrics(log)
+tp          = m["tp"]
+fp          = m["fp"]
+fn          = m["fn"]
+prec        = m["precision"]
+f1          = m["f1"]
 degradazione = (1 - f1 / f1_baseline) * 100 if f1_baseline > 0 else 0.0
 
 col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 col1.metric(t["m_anomalies"], n_anomalies, help=t["m_anomalies_help"])
-col2.metric("TP", tp, f"/{MAX_TP} max",   help=t["m_tp_help"])
+col2.metric("TP", tp, f"/{m['max_tp']} max", help=t["m_tp_help"])
 col3.metric("FP", fp,                      help=t["m_fp_help"])
 col4.metric("FN", fn,                      help=t["m_fn_help"])
 col5.metric(t["m_f1"],   f"{f1:.0%}",      help=t["m_f1_help"])
