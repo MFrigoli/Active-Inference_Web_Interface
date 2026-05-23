@@ -518,9 +518,11 @@ with tab_abl2:
     else:
         _v2_name, _v2_formula = "NONE",           "0"
 
-    _v2_tp   = sum(1 for d in log if d["velocity"] < 10 and TRANSITION_WIN[0] <= d["t"] <= TRANSITION_WIN[1])
-    _v2_fp   = sum(1 for d in log if d["velocity"] < 10 and not (TRANSITION_WIN[0] <= d["t"] <= TRANSITION_WIN[1]))
-    _v2_prec = _v2_tp / (_v2_tp + _v2_fp) if (_v2_tp + _v2_fp) > 0 else 0.0
+    _v2_m    = compute_metrics(log)
+    _v2_tp   = _v2_m["tp"]
+    _v2_fp   = _v2_m["fp"]
+    _v2_prec = _v2_m["precision"]
+    _v2_maxt = _v2_m["max_tp"]
 
     _v2_times = [d["t"]        for d in log]
     _v2_vel   = [d["velocity"] for d in log]
@@ -552,7 +554,7 @@ with tab_abl2:
         f"<div style='font-size:1.4rem; font-weight:700; color:{_v2_color_css}; margin-bottom:4px'>"
         f"{_v2_name} &nbsp;|&nbsp; "
         f"<span style='font-weight:400'>{_v2_formula}</span> &nbsp;|&nbsp; "
-        f"<span style='font-size:1.1rem; color:#ccc'>TP={_v2_tp}/{MAX_TP} &nbsp; FP={_v2_fp} &nbsp; Prec={_v2_prec:.2f}</span>"
+        f"<span style='font-size:1.1rem; color:#ccc'>TP={_v2_tp}/{_v2_maxt} &nbsp; FP={_v2_fp} &nbsp; Prec={_v2_prec:.2f}</span>"
         f"</div>",
         unsafe_allow_html=True,
     )
