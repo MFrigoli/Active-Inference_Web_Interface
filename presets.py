@@ -8,7 +8,7 @@ import streamlit as st
 _BASE = dict(
     s_anomaly_threshold=0.30, s_sensor_noise=0.05,
     s_attack_start=22, s_attack_end=28,
-    s_enable_risk=True, s_enable_hazard=True, s_enable_cost=True, s_enable_epistemic=True,
+    s_enable_pragmatic=True, s_enable_risk=True, s_enable_cost=True, s_enable_epistemic=True,
     s_enable_threshold=True, s_enable_uncertainty=True, s_enable_model=True,
     s_min_uncertainty=0.1, s_lucky_model=False,
     s_cost_maintain=0.1, s_cost_slow=0.4, s_cost_stop=0.8,

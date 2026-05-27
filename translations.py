@@ -58,11 +58,11 @@ T = {
         # EFE components
         "efe_help":            ("L'agente sceglie l'azione con il costo totale più basso. "
                                 "Disattiva i componenti per vedere come cambia il comportamento."),
-        "efe_risk_label":      "Pragmatic  (= Risk + Cost)",
-        "efe_risk_help":       ("Il termine 'pratico': tiene conto del pericolo fisico e del costo dell'azione. "
+        "efe_pragmatic_label":  "Pragmatic  (= Risk + Cost)",
+        "efe_pragmatic_help":  ("Il termine 'pratico': tiene conto del pericolo fisico e del costo dell'azione. "
                                 "Se disattivato, l'agente ignora completamente rischi e costi."),
-        "efe_hazard_label":    "Risk",
-        "efe_hazard_help":     ("Quanto è pericoloso trovarsi vicino alla zona di transizione dello scambio. "
+        "efe_risk_label":      "Risk",
+        "efe_risk_help":       ("Quanto è pericoloso trovarsi vicino alla zona di transizione dello scambio. "
                                 "Più ci si avvicina, più il rischio sale."),
         "efe_cost_label":      "Cost",
         "efe_cost_help":       ("Ogni azione ha un costo fisso: mantieni (0.1) < rallenta (0.4) < fermati (0.8). "
@@ -350,11 +350,11 @@ Pragmatic value  =  - Risk(π)  - Cost(π)
         # EFE components
         "efe_help":            ("The agent picks the action with the lowest total cost. "
                                 "Disable components to see how behavior degrades."),
-        "efe_risk_label":      "Pragmatic  (= Risk + Cost)",
-        "efe_risk_help":       ("The 'practical' term: accounts for physical danger and action cost. "
+        "efe_pragmatic_label":  "Pragmatic  (= Risk + Cost)",
+        "efe_pragmatic_help":  ("The 'practical' term: accounts for physical danger and action cost. "
                                 "If disabled, the agent ignores risks and costs entirely."),
-        "efe_hazard_label":    "Risk",
-        "efe_hazard_help":     ("How dangerous it is to be near the switch transition zone. "
+        "efe_risk_label":      "Risk",
+        "efe_risk_help":       ("How dangerous it is to be near the switch transition zone. "
                                 "The closer the train, the higher the risk."),
         "efe_cost_label":      "Cost",
         "efe_cost_help":       ("Each action has a fixed cost: maintain (0.1) < slow (0.4) < stop (0.8). "

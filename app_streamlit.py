@@ -246,17 +246,17 @@ with st.sidebar:
 
     st.divider()
     st.subheader(t["sb_efe"], help=t["efe_help"])
-    enable_risk = st.checkbox(t["efe_risk_label"], key="s_enable_risk",
-        help=t["efe_risk_help"])
+    enable_pragmatic = st.checkbox(t["efe_pragmatic_label"], key="s_enable_pragmatic",
+        help=t["efe_pragmatic_help"])
     _, _cb = st.columns([0.08, 0.92])
     with _cb:
-        enable_hazard = st.checkbox(t["efe_hazard_label"], key="s_enable_hazard",
-            disabled=not enable_risk, help=t["efe_hazard_help"])
-        enable_cost   = st.checkbox(t["efe_cost_label"],   key="s_enable_cost",
-            disabled=not enable_risk, help=t["efe_cost_help"])
-    if not enable_risk:
-        enable_hazard = False
-        enable_cost   = False
+        enable_risk   = st.checkbox(t["efe_risk_label"],  key="s_enable_risk",
+            disabled=not enable_pragmatic, help=t["efe_risk_help"])
+        enable_cost   = st.checkbox(t["efe_cost_label"],  key="s_enable_cost",
+            disabled=not enable_pragmatic, help=t["efe_cost_help"])
+    if not enable_pragmatic:
+        enable_risk = False
+        enable_cost = False
     enable_epistemic = st.checkbox(t["efe_epistemic_label"], key="s_enable_epistemic",
         help=t["efe_epistemic_help"])
 
@@ -271,7 +271,7 @@ log = run_simulation(
     attack_start=attack_start,
     attack_end=attack_end,
     time_steps=time_steps,
-    enable_hazard=enable_hazard,
+    enable_risk=enable_risk,
     enable_cost=enable_cost,
     enable_epistemic=enable_epistemic,
     cost_maintain=cost_maintain,
@@ -293,7 +293,7 @@ log = run_simulation(
 log_baseline = run_simulation(
     anomaly_threshold=0.30, sensor_noise=0.05,
     attack_start=22, attack_end=28, time_steps=50,
-    enable_hazard=True, enable_cost=True, enable_epistemic=True,
+    enable_risk=True, enable_cost=True, enable_epistemic=True,
     cost_maintain=0.1, cost_slow=0.4, cost_stop=0.8,
     seed=42,
     enable_threshold=True, enable_uncertainty=True, enable_model=True,
@@ -387,7 +387,7 @@ with tab_abl1:
         _missing.append(t["abl1_miss_model"])
     if lucky_model:
         _missing.append(t["abl1_miss_lucky"])
-    if not enable_hazard:
+    if not enable_risk:
         _missing.append(t["abl1_miss_risk"])
     if not enable_cost:
         _missing.append(t["abl1_miss_cost"])
@@ -497,7 +497,7 @@ with tab_abl1:
 with tab_abl2:
     st.markdown(t["abl2_title"])
 
-    _h = enable_hazard
+    _h = enable_risk
     _c = enable_cost
     _e = enable_epistemic
 

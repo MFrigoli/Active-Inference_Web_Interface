@@ -14,7 +14,7 @@ def run_simulation(
     attack_start,
     attack_end,
     time_steps,
-    enable_hazard,
+    enable_risk,
     enable_cost,
     enable_epistemic,
     cost_maintain,
@@ -104,7 +104,7 @@ def run_simulation(
 
         # --- EFE ---
         def calc_efe(action):
-            if enable_hazard:
+            if enable_risk:
                 risk_prox = max(0.0, 1.0 - abs(belief_estimate - TRANSITION) * 2)
                 risk_unc  = uncertainty * 0.5
                 risk      = min(1.5, risk_prox + risk_unc)
