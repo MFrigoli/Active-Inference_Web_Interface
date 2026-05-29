@@ -117,23 +117,47 @@ def build_figures(log, attack_start, attack_end, anomaly_threshold, lang="it"):
     ))
     fig1.update_layout(**layout(t["fig1_title"], t["fig_switch_axis"], [-0.05, 1.1]))
 
-    # 2. Inference Layer
+    # 2. Detection Layer: prediction error vs soglia
+    fig2 = go.Figure()
+    for sh in anomaly_shapes():
+        fig2.add_shape(**sh)
+    fig2.add_trace(go.Scatter(
+        x=times, y=pred_err,
+        name=t["fig_pred_trace"],
+        line=dict(color="#e67e22", width=2.5),
+        customdata=trust_labels,
+        hovertemplate="t=%{x} | err=%{y:.3f} → %{customdata}<extra></extra>",
+    ))
+    fig2.add_trace(go.Scatter(
+        x=times, y=[anomaly_threshold] * len(times),
+        name=t["fig_threshold"].format(anomaly_threshold),
+        line=dict(color="#c0392b", width=2, dash="dash"),
+        hovertemplate=t["fig_threshold"].split("=")[0] + "=%{y:.3f}<extra></extra>",
+    ))
+    fig2.add_trace(go.Scatter(
+        x=[None], y=[None], name=t["fig_anomaly_sq"],
+        mode="markers",
+        marker=dict(size=10, color="rgba(231,76,60,0.4)", symbol="square"),
+    ))
+    fig2.update_layout(**layout(t["fig2_title"], t["fig_pred_axis"], [-0.05, 1.1]))
+
+    # 3. Inference Layer: come interpreta i dati?
     anom_y = [estimate[t_] for t_ in anom_t]
     belief_custom = list(zip(
         pred_err, [d["expected"] for d in log], uncertainty, trust_labels
     ))
 
-    fig2 = go.Figure()
+    fig3 = go.Figure()
     for sh in anomaly_shapes():
-        fig2.add_shape(**sh)
-    fig2.add_trace(go.Scatter(
+        fig3.add_shape(**sh)
+    fig3.add_trace(go.Scatter(
         x=times, y=uncertainty, name=t["fig_uncertainty"],
         fill="tozeroy",
         line=dict(color="rgba(150,150,150,0.6)", width=1),
         fillcolor="rgba(150,150,150,0.25)",
         hovertemplate="t=%{x} | unc=%{y:.3f}<extra>" + t["fig_uncertainty"] + "</extra>",
     ))
-    fig2.add_trace(go.Scatter(
+    fig3.add_trace(go.Scatter(
         x=times, y=estimate, name=t["fig_belief"],
         line=dict(color="#2980b9", width=2),
         customdata=belief_custom,
@@ -147,37 +171,13 @@ def build_figures(log, attack_start, attack_end, anomaly_threshold, lang="it"):
         ),
     ))
     if anom_t:
-        fig2.add_trace(go.Scatter(
+        fig3.add_trace(go.Scatter(
             x=anom_t, y=anom_y, name=t["fig_anomaly_mk"],
             mode="markers",
             marker=dict(symbol="x", size=9, color="#e74c3c", line_width=2),
             hovertemplate="t=%{x} → " + t["trust_model"] + "<extra></extra>",
         ))
-    fig2.update_layout(**layout(t["fig2_title"], t["fig_belief_axis"], [-0.05, 1.1]))
-
-    # 3. Prediction Error vs Soglia
-    fig3 = go.Figure()
-    for sh in anomaly_shapes():
-        fig3.add_shape(**sh)
-    fig3.add_trace(go.Scatter(
-        x=times, y=pred_err,
-        name=t["fig_pred_trace"],
-        line=dict(color="#e67e22", width=2.5),
-        customdata=trust_labels,
-        hovertemplate="t=%{x} | err=%{y:.3f} → %{customdata}<extra></extra>",
-    ))
-    fig3.add_trace(go.Scatter(
-        x=times, y=[anomaly_threshold] * len(times),
-        name=t["fig_threshold"].format(anomaly_threshold),
-        line=dict(color="#c0392b", width=2, dash="dash"),
-        hovertemplate=t["fig_threshold"].split("=")[0] + "=%{y:.3f}<extra></extra>",
-    ))
-    fig3.add_trace(go.Scatter(
-        x=[None], y=[None], name=t["fig_anomaly_sq"],
-        mode="markers",
-        marker=dict(size=10, color="rgba(231,76,60,0.4)", symbol="square"),
-    ))
-    fig3.update_layout(**layout(t["fig3_title"], t["fig_pred_axis"], [-0.05, 1.1]))
+    fig3.update_layout(**layout(t["fig3_title"], t["fig_belief_axis"], [-0.05, 1.1]))
 
     # Helper: EFE per-action graph
     def efe_action_fig(title, neg_pv_vals, epist_vals, efe_vals_list,

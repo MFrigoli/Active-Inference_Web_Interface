@@ -152,8 +152,8 @@ T = {
 
         # Figures — chart titles (layers)
         "fig1_title":     "1. Stato fisico: realtà vs sensore",
-        "fig2_title":     "2. Livello di inferenza: come interpreta i dati?",
-        "fig3_title":     "3. Errore di predizione vs Soglia di Anomalia",
+        "fig2_title":     "2. Detection Layer: errore di predizione vs soglia",
+        "fig3_title":     "3. Inference Layer: come interpreta i dati?",
         "fig4a_title":    "4a. EFE Mantieni  (v=10)",
         "fig4b_title":    "4b. EFE Rallenta  (v=4)",
         "fig4c_title":    "4c. EFE Fermati  (v=0)",
@@ -444,8 +444,8 @@ Pragmatic value  =  - Risk(π)  - Cost(π)
 
         # Figures — chart titles (layers)
         "fig1_title":    "1. Physical state: reality vs sensor",
-        "fig2_title":    "2. Inference Layer: how it interprets data?",
-        "fig3_title":    "3. Prediction Error vs Anomaly Threshold",
+        "fig2_title":    "2. Detection Layer: prediction error vs threshold",
+        "fig3_title":    "3. Inference Layer: how it interprets data?",
         "fig4a_title":   "4a. EFE Maintain  (v=10)",
         "fig4b_title":   "4b. EFE Slow  (v=4)",
         "fig4c_title":   "4c. EFE Stop  (v=0)",
